@@ -1,4 +1,3 @@
-from queue import PriorityQueue
 from gui import *
 from time import time
 from sim import Simulator, Interface
@@ -50,7 +49,6 @@ class Agent:
         while q:
             # pop first element from queue
             node = q.pop(0)
-            print(node)
             # get the list of legal actions
             actions_list = interface.valid_actions(node[0])
             

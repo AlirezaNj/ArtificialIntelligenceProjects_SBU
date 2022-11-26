@@ -9,14 +9,15 @@ class Simulator:
         self.sticky_cubes = sticky_cubes
     
     def take_action(self, action):
-        # TODO implement the game logic here
         # actions +90 : 1 , 180 : 0 , -90 : -1
         # axis x : 0 , y : 1 , z : 2
+        temp_map = deepcopy(self.map)
         index = action[0]
         degree = action[1]
-        cube1 = self.map[index]
-        cube2 = self.map[index+1]
-        cube3 = self.map[index+2]
+        
+        cube1 = temp_map[index]
+        cube2 = temp_map[index+1]
+        cube3 = temp_map[index+2]
         axis = None
         sticky_status = False
 
@@ -32,12 +33,21 @@ class Simulator:
             if sticky_status == False:
                 return
             else:
-                for i in range(index+2 ,26):
+                for i in range(index+2 ,25):
                     if [i, i+1] not in self.sticky_cubes:
-                        return self.take_action([degree, i])
+                        return self.take_action([i, degree])
         else:
-            for i in range(index+2, 26):
-                self.map[i] = self.rotate(degree, cube2, self.map[i], axis)            
+            for i in range(index+2, 27):
+                temp_map[i] = self.rotate(degree, cube2, temp_map[i], axis)
+
+        flag = True
+        for i in range(len(temp_map)):
+            for j in range(len(temp_map)):
+                if (i!=j) & (np.array_equal(temp_map[i], temp_map[j])):
+                    flag = False
+
+        if flag:
+            self.map = deepcopy(temp_map)    
      
     def rotate(self, action , center_cube, cube, axis):
         for i in range(3):
@@ -53,20 +63,23 @@ class Simulator:
             sin_action = -1
             cos_action = 0
         
+        temp_cube = [0,0,0]
         if axis == 0:
-            cube[1] = cube[1] * cos_action - cube[2] * sin_action
-            cube[2] = cube[1] * sin_action + cube[2] * cos_action
+            temp_cube[0] = cube[0]
+            temp_cube[1] = cube[1] * cos_action - cube[2] * sin_action
+            temp_cube[2] = cube[1] * sin_action + cube[2] * cos_action
         elif axis == 1:
-            cube[0] = cube[0] * cos_action + cube[2] * sin_action
-            cube[2] = cube[2] * cos_action - cube[0] * sin_action
+            temp_cube[0] = cube[0] * cos_action + cube[2] * sin_action
+            temp_cube[1] = cube[1]
+            temp_cube[2] = cube[2] * cos_action - cube[0] * sin_action
         else :
-            cube[0] = cube[0] * cos_action - cube[1] * sin_action
-            cube[1] = cube[1] * cos_action + cube[0] * sin_action
+            temp_cube[0] = cube[0] * cos_action - cube[1] * sin_action
+            temp_cube[1] = cube[1] * cos_action + cube[0] * sin_action
+            temp_cube[2] = cube[2]
 
         for i in range(3):
-            cube[i] = cube[i] + center_cube[i]
+            cube[i] = temp_cube[i] + center_cube[i]
         return cube
-
 
 class Interface:
     def __init__(self):
@@ -79,11 +92,9 @@ class Interface:
         return _copy
 
     def perceive(self, state):
-        # TODO return what the agent will see ('map' and 'location') as json
         return json.dumps({'map':state.map , 'sticky_cubes':state.sticky_cubes})
 
     def goal_test(self, state):
-        # TODO return if goal has been reached
         xs, ys, zs = [], [], []
         for cube in state.map:
             xs.append(cube[0])
@@ -100,12 +111,17 @@ class Interface:
         state.take_action(action)
 
     def valid_actions(self, state):
+        not_important_cubes = []
+        for s in state.sticky_cubes:
+            not_important_cubes.append(s[1])
+        
         degree = [-1, 0, 1]
         res=[]
-        for i in range(1,25):
-            for k in degree:
-                res.append([i,k])
-        
+        for i in range(0,25):
+            if i+1 not in not_important_cubes:
+                for k in degree:
+                    res.append([i,k])
+            
         return res
 
     def valid_state(self, state):
